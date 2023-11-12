@@ -1,0 +1,482 @@
+---
+title: "Healthcare Challenge"
+author: Laura Pérez, Laura Humet, Adriana Nialet and Martina Massana
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(factoextra)
+library(cli)
+library(forecast)
+require(gridExtra)
+
+knitr::opts_chunk$set(echo = TRUE, fig.width=13, fig.height=6.5)
+```
+
+Having chosen the Healthcare Challenge, the resolution we pose consists in setting out a predictive model \textbf{based on clustering and forecasting.} 
+\newline Keeping in mind the size of our \textit{dataset}, we ought to find a clever and representative way of classifying our data. We have established several criteria with which, combined, we hope to reach a realistic prediction for 2023, the reference year in the challenge. 
+\newline\newline Firstly we are going to read our \textit{dataset} into the Markdown document and saving it as a defined object. As well as adding a new column to the table to be able to easily identify the year each order is made.
+
+```{r data reading}
+data <- read_excel("C:/Users/Usuario/Desktop/DATATHON/consumo_material_clean.xlsx")
+data$year <- as.numeric(substr(data$FECHAPEDIDO, 7,8)) # last two characters of the date
+```
+
+Before filtering, we are going to represent the total number of purchases of each year, using a barchart.
+
+```{r total-year plot, message = FALSE}
+
+data_summarized <- summarise(group_by(data, year, CODIGO),
+                             TOTAL_CANTIDADCOMPRA = sum(CANTIDADCOMPRA),
+                             TOTAL_PRECIO = sum(PRECIO),
+                             PRECIO_UNID = sum(PRECIO) / sum(CANTIDADCOMPRA))
+ggplot(data_summarized, aes(x = year, y = TOTAL_CANTIDADCOMPRA, fill = CODIGO)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Yearly quantity of purchases", 
+       x = "Year", y = "Total product purchases") +
+  theme_minimal()
+```
+
+
+\begin{itemize}
+  \item[\textbf{1.}] \textbf{Filtering by year and type of product}
+\end{itemize}
+We are going to plot the monthly total purchases for each year, considering each plot line to be a different type of product. The type of product, as specified in the problem description, is given by the letter of the product code, the first character of each entry in the column \textbf{CODIGO}. 
+
+```{r plots 15 16, message = FALSE, warning = FALSE}
+data$month <- as.numeric(substr(data$FECHAPEDIDO, 4,5))
+data$code <- substr(data$CODIGO, 1,1)
+
+selected_rows15 <- data[data$year == 15, ]
+data_summarized15 <- summarise(group_by(selected_rows15, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+selected_rows16 <- data[data$year == 16, ]
+data_summarized16 <- summarise(group_by(selected_rows16, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+plot15 <- ggplot(data_summarized15, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2015", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+plot16 <- ggplot(data_summarized16, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2016", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+
+grid.arrange(plot15, plot16, ncol=2)
+```
+We repeat the process for the rest of years in the spectrum.
+\newline
+
+```{r plots 17 18 19 20 21 21, echo = FALSE, message = FALSE, warning = FALSE}
+selected_rows17 <- data[data$year == 17, ]
+data_summarized17 <- summarise(group_by(selected_rows17, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+selected_rows18 <- data[data$year == 18, ]
+data_summarized18 <- summarise(group_by(selected_rows18, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+selected_rows19 <- data[data$year == 19, ]
+data_summarized19 <- summarise(group_by(selected_rows19, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+selected_rows20 <- data[data$year == 20, ]
+data_summarized20 <- summarise(group_by(selected_rows20, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+selected_rows21 <- data[data$year == 21, ]
+data_summarized21 <- summarise(group_by(selected_rows21, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+selected_rows22 <- data[data$year == 22, ]
+data_summarized22 <- summarise(group_by(selected_rows22, month, code), 
+                               total_quantity = sum(CANTIDADCOMPRA))
+
+plot17 <- ggplot(data_summarized17, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2017", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+
+plot18 <- ggplot(data_summarized18, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2018", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+grid.arrange(plot17, plot18, ncol=2)
+
+plot19 <- ggplot(data_summarized19, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2019", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3', 'orchid')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+
+plot20 <- ggplot(data_summarized20, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2020", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3', 'orchid')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+grid.arrange(plot19, plot20, ncol=2)
+
+plot21 <- ggplot(data_summarized21, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2021", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3', 'orchid')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+
+plot22 <- ggplot(data_summarized22, aes(x = month, y = total_quantity, color = code)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Quantity purchased of each type of product, in 2022", 
+       x = "Month", y = "Quantity purchased") +
+  theme_minimal() +
+  scale_color_manual(values = c('salmon1', 'springgreen3', 'darkslategray3', 'orchid')) +
+  scale_x_continuous(breaks = seq(1, 12, 1), limits = c(1, 12))
+grid.arrange(plot21, plot22, ncol=2)
+```
+
+Continuing with the classification by type of product, we will narrow the search and create, for each letter, two matrices containing: the monthly evolution of the sum of prices per unit and the total amount spent in all purchases of each month; both for all years.  
+```{r matrix relations B}
+data$produnitat <- data$PRECIO/data$CANTIDADCOMPRA
+dataB <- data[data$code == 'B',]
+
+months <- c("January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December")
+
+produnitB <- matrix(nrow=0, ncol=12)
+for (year in 15:22) {
+  data_year <- dataB[dataB$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$produnitat))
+  }
+  produnitB <- rbind(produnitB, v)
+}
+rownames(produnitB) <- c(2015:2022)
+colnames(produnitB) <- months
+print(produnitB)
+
+priceB <- matrix(nrow=0, ncol=12)
+for (year in 15:22) {
+  data_year <- dataB[dataB$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$PRECIO))
+  }
+  priceB <- rbind(priceB, v)
+}
+rownames(priceB) <- c(2015:2022)
+colnames(priceB) <- months
+print(priceB)
+
+# Create a barchart for each type of product
+par(mfrow = c(1, 2))
+barplot(t(produnitB), beside = TRUE, col = colorspace::rainbow_hcl(ncol(produnitB)), 
+        names.arg = 2015:2022, main = "Unit price for B products", 
+        xlab = "Year", ylab = "Price/Unit")
+
+barplot(t(priceB), beside = TRUE, col = colorspace::rainbow_hcl(ncol(priceB)), 
+        names.arg = 2015:2022, main = "Price of B", 
+        xlab = "Year", ylab = "Price",
+        legend.text = months, args.legend = list(x = "topleft", cex = 0.85, ncol = 3))
+
+```
+We repeat the process for the rest of product types.
+\newline
+```{r rest of matrix relations, echo = FALSE}
+dataC <- data[data$code == 'C',]
+produnitC <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataC[dataC$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$produnitat))
+  }
+  produnitC <- rbind(produnitC, v)
+}
+rownames(produnitC) <- c(2015:2022)
+colnames(produnitC) <- months
+
+priceC <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataC[dataC$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$PRECIO))
+  }
+  priceC <- rbind(priceC, v)
+}
+rownames(priceC) <- c(2015:2022)
+colnames(priceC) <- months
+
+#-----------------------------------------------------------------
+
+dataE <- data[data$code == 'E',]
+produnitE <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataE[dataE$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$produnitat))
+  }
+  produnitE <- rbind(produnitE, v)
+}
+rownames(produnitE) <- c(2015:2022)
+colnames(produnitE) <- months
+
+priceE <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataE[dataE$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$PRECIO))
+  }
+  priceE <- rbind(priceE, v)
+}
+rownames(priceE) <- c(2015:2022)
+colnames(priceE) <- months
+
+#---------------------------------------------------------------
+
+dataF <- data[data$code == 'F',]
+produnitF <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataF[dataF$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$produnitat))
+  }
+  produnitF <- rbind(produnitF, v)
+}
+rownames(produnitF) <- c(2015:2022)
+colnames(produnitF) <- months
+
+priceF <- matrix(nrow=0, ncol=12)
+
+for (year in 15:22) {
+  data_year <- dataF[dataF$year == year, ]
+  v <- c()
+  for (month in 1:12) {
+    data_month <- data_year[data_year$month == month, ]
+    v <- c(v, sum(data_month$PRECIO))
+  }
+  priceF <- rbind(priceF, v)
+}
+rownames(priceF) <- c(2015:2022)
+colnames(priceF) <- months
+
+par(mfrow = c(1, 2))
+barplot(t(produnitC), beside = TRUE, col = colorspace::rainbow_hcl(ncol(produnitC)), names.arg = 2015:2022, 
+        main = "Unit price for C products", xlab = "Year", ylab = "Price/Unit")
+
+barplot(t(priceC), beside = TRUE, col = colorspace::rainbow_hcl(ncol(priceC)), names.arg = 2015:2022, 
+        main = "Price of C", xlab = "Year", ylab = "Price",
+        legend.text = months, args.legend = list(x = "topleft", cex = 0.85, ncol = 3))
+
+par(mfrow = c(1, 2))
+barplot(t(produnitE), beside = TRUE, col = colorspace::rainbow_hcl(ncol(produnitE)), names.arg = 2015:2022, 
+        main = "Unit price for E products", xlab = "Year", ylab = "Price/Unit")
+
+barplot(t(priceE), beside = TRUE, col = colorspace::rainbow_hcl(ncol(priceE)), names.arg = 2015:2022, 
+        main = "Price of E", xlab = "Year", ylab = "Price",
+        legend.text = months, args.legend = list(x = "topleft", cex = 0.85, ncol = 3))
+
+par(mfrow = c(1, 2))
+barplot(t(produnitF), beside = TRUE, col = colorspace::rainbow_hcl(ncol(produnitF)), names.arg = 2015:2022, 
+        main = "Unit price for F products", xlab = "Year", ylab = "Price/Unit")
+
+barplot(t(priceF), beside = TRUE, col = colorspace::rainbow_hcl(ncol(priceF)), names.arg = 2015:2022, 
+        main = "Price of F", xlab = "Year", ylab = "Price",
+        legend.text = months, args.legend = list(x = "topleft", cex = 0.85, ncol = 3))
+
+```
+The goal with these charts is to see whether a price fluctuation affects the quantity of purchases or not. Comparing both charts to the previous section's plot, we are able to see the tendency is the same, so the effect is neither positive or negative. We can conclude \textbf{purchases ar based on necessity} and not conditioned by price.
+\newline\newline Furthermore, it is necessary to note the behavior of different hospitals is similar, so we will consider them as a whole, not finding necessary having to analyse each one's progression separately. 
+
+```{r hospital-year, message = FALSE}
+data$hospital <- substr(data$ORIGEN, 3, 4)
+data_hospital <- summarise(group_by(data, year, hospital), 
+                           total_quantity = sum(CANTIDADCOMPRA))
+
+ggplot(data_hospital, aes(x = factor(year), y = total_quantity, color = hospital)) +
+  geom_line(aes(group = hospital)) +
+  geom_point() +
+  labs(title = "Total quantity purchased annualy by each hospital", 
+       x = "Year", y = "Total purchases") +
+  theme_minimal() +
+  scale_x_discrete(breaks = unique(data_hospital$year))
+
+```
+Something we need to keep in mind when analyzing this plot is the fact the data we have from 2023, which we added only for credibility reasons, to make it as real as possible; \textbf{only goes from January to mid October}. It makes sense the quantities are quite lower than the previous years, for which we have data from the twelve months; especially when we have previously seen November and December are months with large amounts of registered purchases. 
+\newline\newline Now, we are going to analyse how the orders are changing annually. To reach this goal, our first option is to group by similarity (clusters) and then, adjust an adequate prediction model.
+
+\begin{itemize}
+  \item[\textbf{2.}] Cluster construction
+\end{itemize}
+In order to be able to define coherent clustering, we need to consider we are taking an annual approach so we need to select a variable subset of: \textbf{total quantity purchased per year, total price, and price per unit.}
+\begin{itemize}
+  \item[\textbf{2.1.}] \fbox{Elbow Method}
+\end{itemize}
+Our first option is to apply the \textbf{Elbow Method}, with which we search the value where an \textit{elbow} (subtle peak, similar to the concept of a local maximum) is created. The point where we evaluate this difference marks the optimal amount of clusters with which we should assess our model. 
+\newline In our case:  
+```{r elbow method}
+numeric_data <- data_summarized[, sapply(data_summarized, is.numeric)]
+data_scaled <- scale(numeric_data)
+
+fviz_nbclust(data_scaled, kmeans, method = "wss")
+```
+With said graphic representation we are able to conclude the Elbow Method doesn't work for this model specifically; it doesn't show for which $k$ amount of clusters we would reach an optimal adjust. If we wanted to be safe and decided to apply a large $k$ we would encounter serious problems of overfitting which would cause the adjust to be incorrect either way.
+
+\begin{itemize}
+  \item[\textbf{2.2.}] \fbox{Gap Method}
+\end{itemize}
+In using the \textbf{Gap Method} we establish the optimal $k$ amount of clusters as the point in which the plot's tendency changes and begins to "stabilize". We want to maximize the distance between each plot gap, assessing the maximum one as the selected optimum. 
+\newline Once again, in our case: 
+
+```{r gap method, message = FALSE}
+gap_stat <- clusGap(data_scaled, FUN = kmeans, K.max = 10, B = 50)
+plot(gap_stat, main = "Gap Statistics")
+```
+As we see, 4 seems a promising candidate for optimal $k$ as it shows a clear change in tendency. But we also have to consider said stabilization reached after 4 only remains until 6, so it doesn't seem to be correct enough. This type of clustering, as well as the other one, doesn't seem to be our best option. 
+\newline\newline Given this two past failed verdicts we need to make a decision based on approximate conclusions extracted from them. That's why, based on plot tendencies we will take \fbox{$k=5$} as our \textbf{optimal amount of clusters}, which curiously enough also coincides with the quantity of different types of products (as we mentioned earlier, letters in the alphanumeric \textbf{CODIGO} column). 
+
+\begin{itemize}
+  \item[\textbf{2.3}] \textbf{Clustering with \textit{k-means}}
+\end{itemize}
+
+Having chosen 5 as our official optimal clustering amount, we can now define this decision as an object, using the R function \textbf{\textit{kmeans}}. But we have to keep in mind our decision was approximate and \textit{kmeans} is unsupervised learning, so we cannot guarantee a 100\% success rate for our prediction using this classification method.  
+```{r kmeans definition}
+km <- kmeans(data_scaled, centers = 5)
+```
+Because the optimization goal is mainly \textbf{economic}, the 5 clusters can be defined with two parameters each, as follows:
+\newline The specification \textbf{TOTAL} refers to the total aggregated amount of units purchased of products in said cluster (in units). \textbf{UNIT PRICE} is the result of the quotient between price per "package" and units per package (in euros). The two sections of every clustered is represented with an \textbf{approximate range}.
+\begin{itemize}
+  \item[\fbox{A}] \textbf{TOTAL:} $20,000-50,000$. \textbf{UNIT PRICE:} $<1$. 
+  \item[\fbox{B}] \textbf{TOTAL:} $80,000-130,000$. \textbf{UNIT PRICE:} $2-7$.
+  \item[\fbox{C}] \textbf{TOTAL:} $<40,000$. \textbf{UNIT PRICE:} $150-500$.
+  \item[\fbox{D}] \textbf{TOTAL:} $200,000-300,000$. \textbf{UNIT PRICE:} $30-50$.
+  \item[\fbox{E}] \textbf{TOTAL:} $60,000-300,000$. \textbf{UNIT PRICE:} $1-3$. 
+\end{itemize}
+
+We are now going to add a variable with the name 'cluster' to our table, from which we are going to be able to analyze each group by different additional criteria. 
+```{r add cluster to table}
+data_summarized$cluster <- km$cluster
+```
+
+Setting out three new classifications, our goal is to see how clusters behave by themselves or if there is any direct relation between certain ones.
+\begin{itemize}
+  \item \textbf{By year and cluster, displaying the total quantity purchased}
+\end{itemize}
+```{r cluster-year-quantity, message = FALSE}
+colors <- c("#00a6fb", "#0582ca", "#006494", "#1b4965", "#051923")
+
+data_clusters <- summarise(group_by(data_summarized, cluster, year), 
+                           TOTAL = sum(TOTAL_CANTIDADCOMPRA), 
+                           TOTAL_PRECIO = sum(TOTAL_PRECIO), 
+                           PRECIO_UNID = sum(TOTAL_PRECIO) / sum(TOTAL_CANTIDADCOMPRA))
+
+ggplot(data_clusters, aes(x = year, y = TOTAL, color = as.factor(cluster))) +
+  geom_point() +
+  geom_line(aes(group = cluster), linetype = "solid") +
+  labs(title = "Total quantitty purchased by year and cluster", 
+       x = "Year", y = "Total quantity purchased", color = "CLUSTER") +
+  theme_minimal() +
+  scale_color_manual(values = colors)
+
+```
+\begin{itemize}
+  \item \textbf{By year and cluster, displaying the total money (regarding price) spent}
+\end{itemize}
+
+```{r cluster-year-tprice}
+ggplot(data_clusters, aes(x = year, y = TOTAL_PRECIO, color = as.factor(cluster))) +
+  geom_point() +
+  geom_line(aes(group = cluster), linetype = "solid")  +
+  labs(title = "Total price by year and cluster", 
+       x = "Year", y = "Total price", color = "CLUSTER") +
+  theme_minimal()+
+  scale_color_manual(values = colors)
+```
+\begin{itemize}
+  \item \textbf{By year and cluster, displaying their unit price}
+\end{itemize}
+
+```{r cluster-year-uprice}
+ggplot(data_clusters, aes(x = year, y = PRECIO_UNID, color = as.factor(cluster))) +
+  geom_point() +
+  geom_line(aes(group = cluster), linetype = "solid")  +
+  labs(title = "Total unit price by year and cluster", 
+       x = "Year", y = "Total unit price", color = "CLUSTER") +
+  theme_minimal()+
+  scale_color_manual(values = colors)
+```
+
+\begin{itemize}
+  \item[\textbf{4.}] \textbf{Our solution:} Applying ARIMA Forecasting
+\end{itemize}
+
+Finally, considering all the information we have seen until this point, we can conclude the desired model is \textbf{not a linear model}, so we will use \textbf{ARIMA Forecasting} to predict one year ahead. 
+\newline For that, we are going to turn our data into an adequate object the ARIMA model can correctly forecast. Following this step, we specify we want to forecast 1 year (12 months) ahead, and with that we are able to plot our result. It is important to keep in mind this result corresponds to \textbf{modeling without considering clusters} yet.  
+```{r arima main}
+ts_data <- ts(data_clusters$TOTAL, frequency = 1)
+
+arima_model <- auto.arima(ts_data)
+forecast_result <- forecast(arima_model, h = 1)  # Forecasting 12 periods ahead
+
+plot(forecast_result, main = "ARIMA Forecast")
+
+```
+
+We can now apply ARIMA Forecasting also to the cluster distribution.
+```{r arima cluster}
+par(mfrow = c(1, 2))
+for (cluster_value in unique(data_clusters$cluster)) {
+  data_cluster <- data_clusters[data_clusters$cluster == cluster_value, ]
+  ts_data <- ts(data_cluster$TOTAL, frequency = 1)
+  arima_model <- auto.arima(ts_data)
+  forecast_result <- forecast(arima_model, h = 1)
+  plot(forecast_result, main = paste("ARIMA Forecast for Cluster", cluster_value))
+}
+```
+In conclusion, \textbf{we have achieved the goal of predicting the demand for 2023.}
+\newline However, it is also important to note we have found out this model is also especially effective for \textbf{monthly predictions} (and frequencies). Unfortunately, because of time constraints we haven't been able to decentralize data into months, but we are aware that said option could be a better prediction. With it we could have taken into account the \textbf{difference in purchase density and distribution throughout the year's months} and narrow the predicted interval for each type of product. This approach would help anticipate orders to be placed monthly, reducing smaller and last-minute orders by half due to a lack of foresight.
